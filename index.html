@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>online-devcom</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="floating-elements"></div>
+    
+    <!-- Landing Page -->
+    <section class="hero-section" id="landing">
+        <div class="hero-bg"></div>
+        <h1 class="hero-title">InstaDev</h1>
+        <p class="hero-subtitle">
+            Connect with developers worldwide. Code together, grow together.
+        </p>
+        <div class="auth-buttons">
+            <button class="cta-button" id="loginBtn">Login</button>
+            <button class="cta-button secondary" id="registerBtn">Join Community</button>
+        </div>
+        <div class="scroll-indicator">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M7 13l3 3 7-7"/>
+                <path d="M7 6l3 3 7-7"/>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeLogin">&times;</button>
+            <h2>Welcome Back</h2>
+            <p class="modal-subtitle">Sign in to your developer account</p>
+            
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="loginUsername">Username</label>
+                    <input type="text" id="loginUsername" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                
+                <button type="submit" class="auth-submit">Sign In</button>
+            </form>
+            
+            <p class="auth-switch">
+                Don't have an account? 
+                <span class="auth-link" id="switchToRegister">Create one</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div class="modal-overlay" id="registerModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeRegister">&times;</button>
+            <h2>Join the Community</h2>
+            <p class="modal-subtitle">Create your developer profile</p>
+            
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label for="registerUsername">Username</label>
+                    <input type="text" id="registerUsername" required>
+                    <span class="form-hint">This will be your unique identifier</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" required>
+                    <span class="form-hint">At least 6 characters</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="skillLevel">Skill Level</label>
+                    <select id="skillLevel" required>
+                        <option value="">Select your level</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                        <option value="expert">Expert</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="primaryStack">Primary Stack</label>
+                    <select id="primaryStack" required>
+                        <option value="">Select your stack</option>
+                        <option value="mern">MERN (MongoDB, Express, React, Node)</option>
+                        <option value="mean">MEAN (MongoDB, Express, Angular, Node)</option>
+                        <option value="django">Django (Python)</option>
+                        <option value="rails">Ruby on Rails</option>
+                        <option value="php">PHP/Laravel</option>
+                        <option value="dotnet">.NET</option>
+                        <option value="java">Java/Spring</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="auth-submit">Create Account</button>
+            </form>
+            
+            <p class="auth-switch">
+                Already have an account? 
+                <span class="auth-link" id="switchToLogin">Sign in</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Dashboard (shown after login) -->
+    <section class="dashboard-section" id="dashboard" style="display: none;">
+        <nav class="dashboard-nav">
+            <div class="nav-brand">
+                <h3>InstaDev</h3>
+            </div>
+            <div class="nav-user">
+                <span class="user-welcome">Welcome, <span id="currentUser"></span></span>
+                <button class="logout-btn" id="logoutBtn">Logout</button>
+            </div>
+        </nav>
+        
+        <div class="dashboard-content">
+            <div class="dashboard-sidebar">
+                <div class="user-profile">
+                    <div class="profile-avatar"></div>
+                    <h4 id="profileName"></h4>
+                    <p id="profileStack"></p>
+                    <p id="profileLevel"></p>
+                </div>
+                
+                <div class="online-status">
+                    <h5>Your Status</h5>
+                    <div class="status-indicator online"></div>
+                    <span>Online & Available</span>
+                </div>
+            </div>
+            
+            <div class="dashboard-main">
+                <h3>Developers Online</h3>
+                <div class="developers-grid" id="onlineDevelopers">
+                    <!-- Online developers will be populated here -->
+                </div>
+            </div>
+        </div>
+    </section>
+    <script src="app.js"></script>
+</body>
+</html>
