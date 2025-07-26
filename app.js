@@ -1,108 +1,9 @@
 // ===== APPLICATION STATE =====
 let currentUser = null;
-let onlineUsers = [];
-let projects = [];
-let stories = [];
-let friendRequests = [];
-let friends = [];
-let scene, camera, renderer, particles;
+let authToken = null;
 
-// ===== MOCK DATABASE (In real MERN app, this would be MongoDB) =====
-let users = [
-    {
-        id: 1,
-        username: "dev_sarah",
-        email: "sarah@example.com",
-        password: "password123", // In real app, this would be hashed
-        skillLevel: "intermediate",
-        primaryStack: "mern",
-        isOnline: true,
-        lastSeen: new Date(),
-        friends: [2],
-        projects: [],
-        stories: []
-    },
-    {
-        id: 2,
-        username: "code_ninja",
-        email: "ninja@example.com",
-        password: "ninja123",
-        skillLevel: "advanced",
-        primaryStack: "django",
-        isOnline: true,
-        lastSeen: new Date(),
-        friends: [1],
-        projects: [],
-        stories: []
-    },
-    {
-        id: 3,
-        username: "react_dev",
-        email: "react@example.com",
-        password: "react123",
-        skillLevel: "expert",
-        primaryStack: "mern",
-        isOnline: false,
-        lastSeen: new Date(Date.now() - 3600000), // 1 hour ago
-        friends: [],
-        projects: [],
-        stories: []
-    }
-];
-
-// Sample projects
-projects = [
-    {
-        id: 1,
-        title: "E-commerce Platform",
-        description: "Full-stack e-commerce solution with React frontend and Node.js backend",
-        technologies: ["React", "Node.js", "MongoDB", "Express"],
-        author: "dev_sarah",
-        authorId: 1,
-        projectLink: "https://github.com/dev_sarah/ecommerce",
-        demoLink: "https://myecommerce.netlify.app",
-        createdAt: new Date(Date.now() - 86400000) // 1 day ago
-    },
-    {
-        id: 2,
-        title: "Task Management App",
-        description: "Django-based task management system with real-time updates",
-        technologies: ["Django", "Python", "PostgreSQL", "WebSocket"],
-        author: "code_ninja",
-        authorId: 2,
-        projectLink: "https://github.com/code_ninja/taskmanager",
-        demoLink: "",
-        createdAt: new Date(Date.now() - 172800000) // 2 days ago
-    }
-];
-
-// Sample stories
-stories = [
-    {
-        id: 1,
-        content: "Just deployed my first full-stack application! 🚀 The feeling of seeing your code live is incredible. Thanks to this amazing community for all the support!",
-        author: "dev_sarah",
-        authorId: 1,
-        tags: ["#milestone", "#fullstack", "#grateful"],
-        likes: 5,
-        retweets: 2,
-        likedBy: [2],
-        retweetedBy: [],
-        createdAt: new Date(Date.now() - 3600000) // 1 hour ago
-    },
-    {
-        id: 2,
-        content: "Working on a Django project and loving the framework's philosophy. 'Don't repeat yourself' has become my coding mantra. What's your favorite programming principle?",
-        author: "code_ninja",
-        authorId: 2,
-        tags: ["#django", "#philosophy", "#coding"],
-        likes: 3,
-        retweets: 1,
-        likedBy: [1],
-        retweetedBy: [1],
-        createdAt: new Date(Date.now() - 7200000) // 2 hours ago
-    }
-];
+// API Base URL
+const API_BASE_URL = 'http://localhost:5000/api';
 
 // ===== UTILITY FUNCTIONS =====
 function showModal(modalId) {
@@ -116,84 +17,167 @@ function hideModal(modalId) {
 }
 
 function showError(message) {
-    // Simple error handling - in real app, you'd have better UI
-    alert(message);
+    // Create a better error notification
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-notification';
+    errorDiv.textContent = message;
+    errorDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(errorDiv);
+    
+    setTimeout(() => {
+        errorDiv.remove();
+    }, 4000);
 }
 
 function showSuccess(message) {
-    // Simple success handling - in real app, you'd have better UI
-    alert(message);
+    // Create a better success notification
+    const successDiv = document.createElement('div');
+    successDiv.className = 'success-notification';
+    successDiv.textContent = message;
+    successDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #51cf66, #40c057);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(81, 207, 102, 0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        successDiv.remove();
+    }, 4000);
+}
+
+// Add CSS for notifications
+const notificationStyles = document.createElement('style');
+notificationStyles.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+`;
+document.head.appendChild(notificationStyles);
+
+// ===== API FUNCTIONS =====
+async function apiCall(endpoint, options = {}) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const config = {
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        },
+        ...options
+    };
+
+    if (authToken) {
+        config.headers.Authorization = `Bearer ${authToken}`;
+    }
+
+    try {
+        const response = await fetch(url, config);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'API request failed');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('API Error:', error);
+        throw error;
+    }
 }
 
 // ===== AUTHENTICATION FUNCTIONS =====
-function register(userData) {
-    // Check if username already exists
-    const existingUser = users.find(user => user.username === userData.username);
-    if (existingUser) {
-        showError("Username already exists!");
+async function register(userData) {
+    try {
+        const response = await apiCall('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify(userData)
+        });
+
+        authToken = response.token;
+        currentUser = response.user;
+        localStorage.setItem('authToken', authToken);
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        showSuccess(response.message);
+        return true;
+    } catch (error) {
+        showError(error.message);
         return false;
     }
-
-    // Check if email already exists
-    const existingEmail = users.find(user => user.email === userData.email);
-    if (existingEmail) {
-        showError("Email already registered!");
-        return false;
-    }
-
-    // Create new user
-    const newUser = {
-        id: users.length + 1,
-        username: userData.username,
-        email: userData.email,
-        password: userData.password, // In real app, hash this!
-        skillLevel: userData.skillLevel,
-        primaryStack: userData.primaryStack,
-        isOnline: true,
-        lastSeen: new Date()
-    };
-
-    users.push(newUser);
-    showSuccess("Account created successfully!");
-    return true;
 }
 
-function login(username, password) {
-    // Find user by username
-    const user = users.find(user => user.username === username);
-    
-    if (!user) {
-        showError("Username not found!");
+async function login(username, password) {
+    try {
+        const response = await apiCall('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ username, password })
+        });
+
+        authToken = response.token;
+        currentUser = response.user;
+        localStorage.setItem('authToken', authToken);
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        showSuccess(response.message);
+        return true;
+    } catch (error) {
+        showError(error.message);
         return false;
     }
-    
-    if (user.password !== password) {
-        showError("Invalid password!");
-        return false;
-    }
-    
-    // Set user as online
-    user.isOnline = true;
-    user.lastSeen = new Date();
-    
-    // Set current user
-    currentUser = user;
-    
-    showSuccess("Welcome back, " + user.username + "!");
-    return true;
 }
 
-function logout() {
-    if (currentUser) {
-        // Set user as offline
-        const user = users.find(u => u.id === currentUser.id);
-        if (user) {
-            user.isOnline = false;
-            user.lastSeen = new Date();
+async function logout() {
+    try {
+        if (authToken) {
+            await apiCall('/auth/logout', { method: 'POST' });
         }
-        
+    } catch (error) {
+        console.error('Logout error:', error);
+    } finally {
+        authToken = null;
         currentUser = null;
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('currentUser');
         showLandingPage();
+    }
+}
+
+// Check for existing session on page load
+function checkExistingSession() {
+    const savedToken = localStorage.getItem('authToken');
+    const savedUser = localStorage.getItem('currentUser');
+
+    if (savedToken && savedUser) {
+        authToken = savedToken;
+        currentUser = JSON.parse(savedUser);
+        showDashboard();
     }
 }
 
@@ -215,16 +199,10 @@ function showDashboard() {
     document.getElementById('profileStack').textContent = getStackName(currentUser.primaryStack);
     document.getElementById('profileLevel').textContent = capitalizeFirst(currentUser.skillLevel);
     
-    // Load online developers
+    // Load dashboard data
     loadOnlineDevelopers();
-    
-    // Load projects
     loadProjects();
-    
-    // Load stories
     loadStories();
-    
-    // Load friends
     loadFriends();
 }
 
@@ -246,187 +224,191 @@ function capitalizeFirst(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function loadOnlineDevelopers() {
-    const container = document.getElementById('onlineDevelopers');
-    container.innerHTML = '';
-    
-    // Get filter values
-    const skillFilter = document.getElementById('skillFilter')?.value || '';
-    const stackFilter = document.getElementById('stackFilter')?.value || '';
-    
-    // Get online users (excluding current user)
-    let onlineDevs = users.filter(user => 
-        user.isOnline && user.id !== currentUser.id &&
-        (skillFilter === '' || user.skillLevel === skillFilter) &&
-        (stackFilter === '' || user.primaryStack === stackFilter)
-    );
-    
-    if (onlineDevs.length === 0) {
-        container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No developers found matching your filters.</p>';
-        return;
-    }
-    
-    onlineDevs.forEach(user => {
-        const devCard = document.createElement('div');
-        devCard.className = 'dev-card';
+async function loadOnlineDevelopers() {
+    try {
+        const skillFilter = document.getElementById('skillFilter')?.value || '';
+        const stackFilter = document.getElementById('stackFilter')?.value || '';
         
-        const isFriend = currentUser.friends && currentUser.friends.includes(user.id);
-        const buttonText = isFriend ? 'Message' : 'Connect';
-        const buttonAction = isFriend ? `messageUser('${user.username}')` : `sendFriendRequest(${user.id})`;
+        const queryParams = new URLSearchParams();
+        if (skillFilter) queryParams.append('skillLevel', skillFilter);
+        if (stackFilter) queryParams.append('primaryStack', stackFilter);
         
-        // Generate random gradient for avatar
-        const gradients = [
-            'linear-gradient(135deg, #667eea, #764ba2)',
-            'linear-gradient(135deg, #f093fb, #f5576c)',
-            'linear-gradient(135deg, #4facfe, #00f2fe)',
-            'linear-gradient(135deg, #43e97b, #38f9d7)',
-            'linear-gradient(135deg, #fa709a, #fee140)',
-            'linear-gradient(135deg, #a8edea, #fed6e3)'
-        ];
+        const users = await apiCall(`/users/online?${queryParams}`);
+        const container = document.getElementById('onlineDevelopers');
+        container.innerHTML = '';
         
-        const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
-        
-        devCard.innerHTML = `
-            <div class="dev-avatar" style="background: ${randomGradient};"></div>
-            <h3 class="dev-name">${user.username}</h3>
-            <p class="dev-stack">${getStackName(user.primaryStack)}</p>
-            <p class="dev-level">${capitalizeFirst(user.skillLevel)} Developer</p>
-            <button class="cta-button" style="margin-top: 1rem; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="${buttonAction}">
-                ${buttonText}
-            </button>
-        `;
-        
-        container.appendChild(devCard);
-    });
-}
-
-function loadProjects() {
-    const container = document.getElementById('projectsGrid');
-    container.innerHTML = '';
-    
-    if (projects.length === 0) {
-        container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No projects shared yet. Be the first to showcase your work!</p>';
-        return;
-    }
-    
-    projects.forEach(project => {
-        const projectCard = document.createElement('div');
-        projectCard.className = 'project-card';
-        
-        const techTags = project.technologies.map(tech => 
-            `<span class="tech-tag">${tech}</span>`
-        ).join('');
-        
-        const links = [];
-        if (project.projectLink) {
-            links.push(`<a href="${project.projectLink}" target="_blank" class="project-link">View Code</a>`);
-        }
-        if (project.demoLink) {
-            links.push(`<a href="${project.demoLink}" target="_blank" class="project-link">Live Demo</a>`);
+        if (users.length === 0) {
+            container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No developers found matching your filters.</p>';
+            return;
         }
         
-        projectCard.innerHTML = `
-            <h3 class="project-title">${project.title}</h3>
-            <p class="project-author">by ${project.author}</p>
-            <p class="project-description">${project.description}</p>
-            <div class="project-tech">${techTags}</div>
-            <div class="project-links">${links.join('')}</div>
-        `;
-        
-        container.appendChild(projectCard);
-    });
+        users.forEach(user => {
+            const devCard = document.createElement('div');
+            devCard.className = 'dev-card';
+            
+            // Generate random gradient for avatar
+            const gradients = [
+                'linear-gradient(135deg, #667eea, #764ba2)',
+                'linear-gradient(135deg, #f093fb, #f5576c)',
+                'linear-gradient(135deg, #4facfe, #00f2fe)',
+                'linear-gradient(135deg, #43e97b, #38f9d7)',
+                'linear-gradient(135deg, #fa709a, #fee140)',
+                'linear-gradient(135deg, #a8edea, #fed6e3)'
+            ];
+            
+            const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
+            
+            devCard.innerHTML = `
+                <div class="dev-avatar" style="background: ${randomGradient};"></div>
+                <h3 class="dev-name">${user.username}</h3>
+                <p class="dev-stack">${getStackName(user.primaryStack)}</p>
+                <p class="dev-level">${capitalizeFirst(user.skillLevel)} Developer</p>
+                <button class="cta-button" style="margin-top: 1rem; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="sendFriendRequest('${user._id}')">
+                    Connect
+                </button>
+            `;
+            
+            container.appendChild(devCard);
+        });
+    } catch (error) {
+        showError('Failed to load developers');
+    }
 }
 
-function loadStories() {
-    const container = document.getElementById('storiesFeed');
-    container.innerHTML = '';
-    
-    if (stories.length === 0) {
-        container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No stories yet. Share your coding journey!</p>';
-        return;
+async function loadProjects() {
+    try {
+        const projects = await apiCall('/projects');
+        const container = document.getElementById('projectsGrid');
+        container.innerHTML = '';
+        
+        if (projects.length === 0) {
+            container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No projects shared yet. Be the first to showcase your work!</p>';
+            return;
+        }
+        
+        projects.forEach(project => {
+            const projectCard = document.createElement('div');
+            projectCard.className = 'project-card';
+            
+            const techTags = project.technologies.map(tech => 
+                `<span class="tech-tag">${tech}</span>`
+            ).join('');
+            
+            const links = [];
+            if (project.projectLink) {
+                links.push(`<a href="${project.projectLink}" target="_blank" class="project-link">View Code</a>`);
+            }
+            if (project.demoLink) {
+                links.push(`<a href="${project.demoLink}" target="_blank" class="project-link">Live Demo</a>`);
+            }
+            
+            projectCard.innerHTML = `
+                <h3 class="project-title">${project.title}</h3>
+                <p class="project-author">by ${project.author.username}</p>
+                <p class="project-description">${project.description}</p>
+                <div class="project-tech">${techTags}</div>
+                <div class="project-links">${links.join('')}</div>
+            `;
+            
+            container.appendChild(projectCard);
+        });
+    } catch (error) {
+        showError('Failed to load projects');
     }
-    
-    // Sort stories by creation date (newest first)
-    const sortedStories = [...stories].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
-    sortedStories.forEach(story => {
-        const storyCard = document.createElement('div');
-        storyCard.className = 'story-card';
+}
+
+async function loadStories() {
+    try {
+        const stories = await apiCall('/stories');
+        const container = document.getElementById('storiesFeed');
+        container.innerHTML = '';
         
-        const timeAgo = getTimeAgo(story.createdAt);
-        const isLiked = story.likedBy.includes(currentUser.id);
-        const isRetweeted = story.retweetedBy.includes(currentUser.id);
+        if (stories.length === 0) {
+            container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No stories yet. Share your coding journey!</p>';
+            return;
+        }
         
-        const tags = story.tags.map(tag => 
-            `<span class="story-tag">${tag}</span>`
-        ).join('');
-        
-        storyCard.innerHTML = `
-            <div class="story-header">
-                <div class="story-avatar"></div>
-                <div>
-                    <div class="story-author">${story.author}</div>
+        stories.forEach(story => {
+            const storyCard = document.createElement('div');
+            storyCard.className = 'story-card';
+            
+            const timeAgo = getTimeAgo(story.createdAt);
+            const isLiked = story.likes.includes(currentUser.id);
+            const isRetweeted = story.retweets.includes(currentUser.id);
+            
+            const tags = story.tags.map(tag => 
+                `<span class="story-tag">${tag}</span>`
+            ).join('');
+            
+            storyCard.innerHTML = `
+                <div class="story-header">
+                    <div class="story-avatar"></div>
+                    <div>
+                        <div class="story-author">${story.author.username}</div>
+                    </div>
+                    <div class="story-time">${timeAgo}</div>
                 </div>
-                <div class="story-time">${timeAgo}</div>
-            </div>
-            <div class="story-content">${story.content}</div>
-            <div class="story-tags">${tags}</div>
-            <div class="story-actions">
-                <button class="story-action ${isLiked ? 'liked' : ''}" onclick="toggleLike(${story.id})">
-                    ❤️ ${story.likes}
-                </button>
-                <button class="story-action ${isRetweeted ? 'retweeted' : ''}" onclick="toggleRetweet(${story.id})">
-                    🔄 ${story.retweets}
-                </button>
-            </div>
-        `;
-        
-        container.appendChild(storyCard);
-    });
+                <div class="story-content">${story.content}</div>
+                <div class="story-tags">${tags}</div>
+                <div class="story-actions">
+                    <button class="story-action ${isLiked ? 'liked' : ''}" onclick="toggleLike('${story._id}')">
+                        ❤️ ${story.likes.length}
+                    </button>
+                    <button class="story-action ${isRetweeted ? 'retweeted' : ''}" onclick="toggleRetweet('${story._id}')">
+                        🔄 ${story.retweets.length}
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(storyCard);
+        });
+    } catch (error) {
+        showError('Failed to load stories');
+    }
 }
 
-function loadFriends() {
-    const friendsContainer = document.getElementById('friendsList');
-    const requestsContainer = document.getElementById('friendRequests');
-    const friendCount = document.getElementById('friendCount');
-    
-    // Load friend requests
-    requestsContainer.innerHTML = '';
-    if (friendRequests.length === 0) {
-        requestsContainer.innerHTML = '<p style="opacity: 0.7;">No pending friend requests</p>';
-    } else {
-        friendRequests.forEach(request => {
-            const user = users.find(u => u.id === request.fromUserId);
-            if (user) {
+async function loadFriends() {
+    try {
+        const [friendRequests, friends] = await Promise.all([
+            apiCall('/friends/requests'),
+            apiCall('/friends')
+        ]);
+
+        const friendsContainer = document.getElementById('friendsList');
+        const requestsContainer = document.getElementById('friendRequests');
+        const friendCount = document.getElementById('friendCount');
+        
+        // Load friend requests
+        requestsContainer.innerHTML = '';
+        if (friendRequests.length === 0) {
+            requestsContainer.innerHTML = '<p style="opacity: 0.7;">No pending friend requests</p>';
+        } else {
+            friendRequests.forEach(request => {
                 const requestCard = document.createElement('div');
                 requestCard.className = 'friend-card';
                 requestCard.innerHTML = `
                     <div class="friend-avatar"></div>
                     <div class="friend-info">
-                        <div class="friend-name">${user.username}</div>
-                        <div class="friend-details">${capitalizeFirst(user.skillLevel)} • ${getStackName(user.primaryStack)}</div>
+                        <div class="friend-name">${request.from.username}</div>
+                        <div class="friend-details">${capitalizeFirst(request.from.skillLevel)} • ${getStackName(request.from.primaryStack)}</div>
                     </div>
                     <div class="friend-actions">
-                        <button class="friend-btn accept" onclick="acceptFriendRequest(${request.id})">Accept</button>
-                        <button class="friend-btn decline" onclick="declineFriendRequest(${request.id})">Decline</button>
+                        <button class="friend-btn accept" onclick="acceptFriendRequest('${request._id}')">Accept</button>
+                        <button class="friend-btn decline" onclick="declineFriendRequest('${request._id}')">Decline</button>
                     </div>
                 `;
                 requestsContainer.appendChild(requestCard);
-            }
-        });
-    }
-    
-    // Load friends list
-    friendsContainer.innerHTML = '';
-    const userFriends = currentUser.friends || [];
-    friendCount.textContent = `${userFriends.length} connection${userFriends.length !== 1 ? 's' : ''}`;
-    
-    if (userFriends.length === 0) {
-        friendsContainer.innerHTML = '<p style="opacity: 0.7;">No friends yet. Start connecting with other developers!</p>';
-    } else {
-        userFriends.forEach(friendId => {
-            const friend = users.find(u => u.id === friendId);
-            if (friend) {
+            });
+        }
+        
+        // Load friends list
+        friendsContainer.innerHTML = '';
+        friendCount.textContent = `${friends.length} connection${friends.length !== 1 ? 's' : ''}`;
+        
+        if (friends.length === 0) {
+            friendsContainer.innerHTML = '<p style="opacity: 0.7;">No friends yet. Start connecting with other developers!</p>';
+        } else {
+            friends.forEach(friend => {
                 const friendCard = document.createElement('div');
                 friendCard.className = 'friend-card';
                 friendCard.innerHTML = `
@@ -440,8 +422,10 @@ function loadFriends() {
                     </div>
                 `;
                 friendsContainer.appendChild(friendCard);
-            }
-        });
+            });
+        }
+    } catch (error) {
+        showError('Failed to load friends');
     }
 }
 
@@ -457,98 +441,53 @@ function getTimeAgo(date) {
 }
 
 // ===== FEATURE FUNCTIONS =====
-function sendFriendRequest(userId) {
-    const existingRequest = friendRequests.find(req => 
-        req.fromUserId === currentUser.id && req.toUserId === userId
-    );
-    
-    if (existingRequest) {
-        showError("Friend request already sent!");
-        return;
+async function sendFriendRequest(userId) {
+    try {
+        await apiCall(`/friends/request/${userId}`, { method: 'POST' });
+        showSuccess('Friend request sent!');
+        loadOnlineDevelopers(); // Refresh to update button states
+    } catch (error) {
+        showError(error.message);
     }
-    
-    const newRequest = {
-        id: friendRequests.length + 1,
-        fromUserId: currentUser.id,
-        toUserId: userId,
-        createdAt: new Date()
-    };
-    
-    friendRequests.push(newRequest);
-    showSuccess("Friend request sent!");
-    loadOnlineDevelopers(); // Refresh to update button states
 }
 
-function acceptFriendRequest(requestId) {
-    const request = friendRequests.find(req => req.id === requestId);
-    if (!request) return;
-    
-    // Add to friends lists
-    if (!currentUser.friends) currentUser.friends = [];
-    if (!currentUser.friends.includes(request.fromUserId)) {
-        currentUser.friends.push(request.fromUserId);
-    }
-    
-    const fromUser = users.find(u => u.id === request.fromUserId);
-    if (fromUser) {
-        if (!fromUser.friends) fromUser.friends = [];
-        if (!fromUser.friends.includes(currentUser.id)) {
-            fromUser.friends.push(currentUser.id);
-        }
-    }
-    
-    // Remove request
-    const requestIndex = friendRequests.findIndex(req => req.id === requestId);
-    if (requestIndex > -1) {
-        friendRequests.splice(requestIndex, 1);
-    }
-    
-    showSuccess("Friend request accepted!");
-    loadFriends();
-    loadOnlineDevelopers();
-}
-
-function declineFriendRequest(requestId) {
-    const requestIndex = friendRequests.findIndex(req => req.id === requestId);
-    if (requestIndex > -1) {
-        friendRequests.splice(requestIndex, 1);
-        showSuccess("Friend request declined");
+async function acceptFriendRequest(requestId) {
+    try {
+        await apiCall(`/friends/accept/${requestId}`, { method: 'POST' });
+        showSuccess('Friend request accepted!');
         loadFriends();
+        loadOnlineDevelopers();
+    } catch (error) {
+        showError(error.message);
     }
 }
 
-function toggleLike(storyId) {
-    const story = stories.find(s => s.id === storyId);
-    if (!story) return;
-    
-    const isLiked = story.likedBy.includes(currentUser.id);
-    
-    if (isLiked) {
-        story.likedBy = story.likedBy.filter(id => id !== currentUser.id);
-        story.likes--;
-    } else {
-        story.likedBy.push(currentUser.id);
-        story.likes++;
+async function declineFriendRequest(requestId) {
+    try {
+        await apiCall(`/friends/decline/${requestId}`, { method: 'POST' });
+        showSuccess('Friend request declined');
+        loadFriends();
+    } catch (error) {
+        showError(error.message);
     }
-    
-    loadStories();
 }
 
-function toggleRetweet(storyId) {
-    const story = stories.find(s => s.id === storyId);
-    if (!story) return;
-    
-    const isRetweeted = story.retweetedBy.includes(currentUser.id);
-    
-    if (isRetweeted) {
-        story.retweetedBy = story.retweetedBy.filter(id => id !== currentUser.id);
-        story.retweets--;
-    } else {
-        story.retweetedBy.push(currentUser.id);
-        story.retweets++;
+async function toggleLike(storyId) {
+    try {
+        await apiCall(`/stories/${storyId}/like`, { method: 'POST' });
+        loadStories(); // Refresh stories to show updated likes
+    } catch (error) {
+        showError('Failed to update like');
     }
-    
-    loadStories();
+}
+
+async function toggleRetweet(storyId) {
+    try {
+        await apiCall(`/stories/${storyId}/retweet`, { method: 'POST' });
+        loadStories(); // Refresh stories to show updated retweets
+    } catch (error) {
+        showError('Failed to update retweet');
+    }
 }
 
 function messageUser(username) {
@@ -577,6 +516,9 @@ function switchTab(tabName) {
 
 // ===== MAIN EVENT HANDLERS =====
 document.addEventListener('DOMContentLoaded', function() {
+    // Check for existing session
+    checkExistingSession();
+
     // Tab switching
     document.querySelectorAll('.tab-button').forEach(button => {
         button.addEventListener('click', function() {
@@ -631,39 +573,41 @@ document.addEventListener('DOMContentLoaded', function() {
     // Project form handling
     const projectForm = document.getElementById('projectForm');
     if (projectForm) {
-        projectForm.addEventListener('submit', function(e) {
+        projectForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const title = document.getElementById('projectTitle').value;
             const description = document.getElementById('projectDescription').value;
-            const tech = document.getElementById('projectTech').value;
+            const technologies = document.getElementById('projectTech').value;
             const projectLink = document.getElementById('projectLink').value;
             const demoLink = document.getElementById('projectDemo').value;
             
-            const newProject = {
-                id: projects.length + 1,
-                title,
-                description,
-                technologies: tech.split(',').map(t => t.trim()),
-                author: currentUser.username,
-                authorId: currentUser.id,
-                projectLink,
-                demoLink,
-                createdAt: new Date()
-            };
-            
-            projects.push(newProject);
-            hideModal('projectModal');
-            projectForm.reset();
-            loadProjects();
-            showSuccess("Project added successfully!");
+            try {
+                await apiCall('/projects', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        technologies,
+                        projectLink,
+                        demoLink
+                    })
+                });
+                
+                hideModal('projectModal');
+                projectForm.reset();
+                loadProjects();
+                showSuccess("Project added successfully!");
+            } catch (error) {
+                showError(error.message);
+            }
         });
     }
     
     // Story form handling
     const storyForm = document.getElementById('storyForm');
     if (storyForm) {
-        storyForm.addEventListener('submit', function(e) {
+        storyForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const content = document.getElementById('storyContent').value;
@@ -674,24 +618,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            const newStory = {
-                id: stories.length + 1,
-                content,
-                author: currentUser.username,
-                authorId: currentUser.id,
-                tags: tags ? tags.split(' ').filter(tag => tag.startsWith('#')) : [],
-                likes: 0,
-                retweets: 0,
-                likedBy: [],
-                retweetedBy: [],
-                createdAt: new Date()
-            };
-            
-            stories.push(newStory);
-            hideModal('storyModal');
-            storyForm.reset();
-            loadStories();
-            showSuccess("Story shared successfully!");
+            try {
+                await apiCall('/stories', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        content,
+                        tags
+                    })
+                });
+                
+                hideModal('storyModal');
+                storyForm.reset();
+                loadStories();
+                showSuccess("Story shared successfully!");
+            } catch (error) {
+                showError(error.message);
+            }
         });
     }
     
@@ -756,12 +698,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Login form handling
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
-        loginForm.addEventListener('submit', function(e) {
+        loginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const username = document.getElementById('loginUsername').value;
             const password = document.getElementById('loginPassword').value;
 
-            if (login(username, password)) {
+            if (await login(username, password)) {
                 hideModal('loginModal');
                 showDashboard();
             }
@@ -771,7 +713,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Register form handling
     const registerForm = document.getElementById('registerForm');
     if (registerForm) {
-        registerForm.addEventListener('submit', function(e) {
+        registerForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const username = document.getElementById('registerUsername').value;
             const email = document.getElementById('registerEmail').value;
@@ -800,9 +742,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 primaryStack
             };
 
-            if (register(userData)) {
+            if (await register(userData)) {
                 hideModal('registerModal');
-                currentUser = users.find(user => user.username === username);
                 showDashboard();
             }
         });
