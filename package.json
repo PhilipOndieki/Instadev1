@@ -1,0 +1,23 @@
+{
+  "name": "instadev",
+  "version": "1.0.0",
+  "description": "A platform by developers, for developers. Connecting coders worldwide by skill level, stack, and stories.",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "developers",
+    "social",
+    "networking",
+    "coding",
+    "community"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
